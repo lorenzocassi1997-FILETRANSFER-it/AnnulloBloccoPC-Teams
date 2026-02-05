@@ -1,0 +1,218 @@
+@echo off
+:: =========================================================
+::  LORENZOCASSI1997-FILETRANSFER
+:: =========================================================
+title AnnulloBlocco Teams + Log
+cls
+echo Avvio interfaccia grafica! 
+echo NON CHIUDERE IL CMD ALTRIMENTI SI INTERROMPE LA SIMULAZIONE DI PRESSIONE DELL'INTERFACCIA GRAFICA!!
+
+set "MyFile=%~f0"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$c = Get-Content -LiteralPath '%MyFile%'; $start = ($c | Select-String -Pattern '^#___START_POWERSHELL_CODE___$').LineNumber; $c | Select-Object -Skip $start | Out-String | Invoke-Expression"
+
+:: error
+if %errorlevel% NEQ 0 (
+    echo.
+    echo ===========================================
+    echo ERRORE CRITICO:
+    echo Impossibile avviare PowerShell.
+    echo VERIFICA CON IL TUO SISTEMISTA INTERNO!
+    echo AH NO GIUSTO, NON PUOI.. STAI PALESEMENTE FACENDO UNA COSA NON LECITA...
+    echo ===========================================
+    pause
+)
+goto :EOF
+
+:: -------------------------------------------------------------------------------------
+:: MODE INVISIBILE: ON
+:: -------------------------------------------------------------------------------------
+#___START_POWERSHELL_CODE___
+
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+# --- 1. SIMULAZIONE TASTO F15 ---
+$Signature = @'
+[DllImport("user32.dll")]
+public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);
+'@
+try {
+    $Simulazione = Add-Type -MemberDefinition $Signature -Name "Win32Sim" -Namespace Win32 -PassThru
+} catch {
+    # Ignora se già caricato
+}
+
+function Premi-F15 {
+    $Simulazione::keybd_event(0x7E, 0, 0, 0)
+    Start-Sleep -Milliseconds 50
+    $Simulazione::keybd_event(0x7E, 0, 2, 0)
+}
+
+# --- 2. CONFIGURAZIONE GUI ---
+$Form = New-Object System.Windows.Forms.Form
+$Form.Text = "No-Sleep Teams + LOG"
+$Form.Size = New-Object System.Drawing.Size(420, 600)
+$Form.StartPosition = "CenterScreen"
+$Form.FormBorderStyle = "FixedDialog"
+$Form.MaximizeBox = $false
+$Form.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$Form.ForeColor = [System.Drawing.Color]::White
+
+# Titolo
+$LblTitle = New-Object System.Windows.Forms.Label
+$LblTitle.Text = "Gestione Orari + Log"
+$LblTitle.Location = New-Object System.Drawing.Point(15, 10)
+$LblTitle.Size = New-Object System.Drawing.Size(300, 25)
+$LblTitle.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+$Form.Controls.Add($LblTitle)
+
+# Input Box
+$GrpInput = New-Object System.Windows.Forms.GroupBox
+$GrpInput.Location = New-Object System.Drawing.Point(15, 40)
+$GrpInput.Size = New-Object System.Drawing.Size(370, 60)
+$GrpInput.ForeColor = [System.Drawing.Color]::White
+$GrpInput.Text = "Aggiungi Fascia"
+$Form.Controls.Add($GrpInput)
+
+$TxtStart = New-Object System.Windows.Forms.TextBox
+$TxtStart.Text = "09:00"
+$TxtStart.Location = New-Object System.Drawing.Point(15, 25)
+$TxtStart.Size = New-Object System.Drawing.Size(60, 20)
+$GrpInput.Controls.Add($TxtStart)
+
+$LblSep = New-Object System.Windows.Forms.Label
+$LblSep.Text = ">>"
+$LblSep.Location = New-Object System.Drawing.Point(80, 27)
+$LblSep.Size = New-Object System.Drawing.Size(30, 20)
+$GrpInput.Controls.Add($LblSep)
+
+$TxtEnd = New-Object System.Windows.Forms.TextBox
+$TxtEnd.Text = "13:00"
+$TxtEnd.Location = New-Object System.Drawing.Point(110, 25)
+$TxtEnd.Size = New-Object System.Drawing.Size(60, 20)
+$GrpInput.Controls.Add($TxtEnd)
+
+$BtnAdd = New-Object System.Windows.Forms.Button
+$BtnAdd.Text = "AGGIUNGI"
+$BtnAdd.Location = New-Object System.Drawing.Point(210, 23)
+$BtnAdd.Size = New-Object System.Drawing.Size(140, 25)
+$BtnAdd.BackColor = [System.Drawing.Color]::Gray
+$BtnAdd.FlatStyle = "Flat"
+$GrpInput.Controls.Add($BtnAdd)
+
+# Lista
+$LstSlots = New-Object System.Windows.Forms.ListBox
+$LstSlots.Location = New-Object System.Drawing.Point(15, 115)
+$LstSlots.Size = New-Object System.Drawing.Size(250, 85)
+$LstSlots.BackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
+$LstSlots.ForeColor = [System.Drawing.Color]::White
+$Form.Controls.Add($LstSlots)
+
+$BtnRem = New-Object System.Windows.Forms.Button
+$BtnRem.Text = "RIMUOVI"
+$BtnRem.Location = New-Object System.Drawing.Point(275, 115)
+$BtnRem.Size = New-Object System.Drawing.Size(110, 30)
+$BtnRem.BackColor = [System.Drawing.Color]::IndianRed
+$BtnRem.FlatStyle = "Flat"
+$Form.Controls.Add($BtnRem)
+
+# Start / Stop
+$BtnStart = New-Object System.Windows.Forms.Button
+$BtnStart.Text = "AVVIA ATTIVITA' NON LECITA"
+$BtnStart.Location = New-Object System.Drawing.Point(15, 220)
+$BtnStart.Size = New-Object System.Drawing.Size(370, 40)
+$BtnStart.BackColor = [System.Drawing.Color]::SeaGreen
+$BtnStart.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+$BtnStart.FlatStyle = "Flat"
+$Form.Controls.Add($BtnStart)
+
+$BtnStop = New-Object System.Windows.Forms.Button
+$BtnStop.Text = "STOP, VOGLIO LAVORARE"
+$BtnStop.Location = New-Object System.Drawing.Point(15, 270)
+$BtnStop.Size = New-Object System.Drawing.Size(370, 30)
+$BtnStop.BackColor = [System.Drawing.Color]::DarkRed
+$BtnStop.Enabled = $false
+$BtnStop.FlatStyle = "Flat"
+$Form.Controls.Add($BtnStop)
+
+# Log
+$LblLog = New-Object System.Windows.Forms.Label
+$LblLog.Text = "Log Eventi:"
+$LblLog.Location = New-Object System.Drawing.Point(15, 315)
+$LblLog.Size = New-Object System.Drawing.Size(300, 20)
+$Form.Controls.Add($LblLog)
+
+$LstLog = New-Object System.Windows.Forms.ListBox
+$LstLog.Location = New-Object System.Drawing.Point(15, 335)
+$LstLog.Size = New-Object System.Drawing.Size(370, 160)
+$LstLog.BackColor = [System.Drawing.Color]::Black
+$LstLog.ForeColor = [System.Drawing.Color]::LimeGreen
+$LstLog.Font = New-Object System.Drawing.Font("Consolas", 9)
+$Form.Controls.Add($LstLog)
+
+$LblStatus = New-Object System.Windows.Forms.Label
+$LblStatus.Text = "Pronto."
+$LblStatus.Location = New-Object System.Drawing.Point(15, 510)
+$LblStatus.Size = New-Object System.Drawing.Size(370, 30)
+$LblStatus.TextAlign = "MiddleCenter"
+$Form.Controls.Add($LblStatus)
+
+# --- 3. LOGICA ---
+$Timer = New-Object System.Windows.Forms.Timer
+$Timer.Interval = 60000
+
+$BtnAdd.Add_Click({
+    try {
+        $s = Get-Date $TxtStart.Text
+        $e = Get-Date $TxtEnd.Text
+        $Entry = $s.ToString("HH:mm") + " - " + $e.ToString("HH:mm")
+        if (-not $LstSlots.Items.Contains($Entry)) { $LstSlots.Items.Add($Entry) }
+    } catch { [System.Windows.Forms.MessageBox]::Show("Formato errato. Usa HH:mm") }
+})
+
+$BtnRem.Add_Click({ if($LstSlots.SelectedIndex -ge 0){$LstSlots.Items.RemoveAt($LstSlots.SelectedIndex)} })
+
+$BtnStart.Add_Click({
+    if ($LstSlots.Items.Count -eq 0) { [System.Windows.Forms.MessageBox]::Show("Inserisci un orario!"); return }
+    $Timer.Start()
+    $BtnStart.Enabled=$false; $BtnStart.BackColor=[System.Drawing.Color]::Gray
+    $BtnStop.Enabled=$true; $BtnStop.BackColor=[System.Drawing.Color]::DarkRed
+    $GrpInput.Enabled=$false; $BtnRem.Enabled=$false
+    $LstLog.Items.Insert(0, "--- AVVIATO ALLE " + (Get-Date).ToString("HH:mm:ss") + " ---")
+    $LblStatus.Text = "In esecuzione..."
+})
+
+$BtnStop.Add_Click({
+    $Timer.Stop()
+    $BtnStart.Enabled=$true; $BtnStart.BackColor=[System.Drawing.Color]::SeaGreen
+    $BtnStop.Enabled=$false; $BtnStop.BackColor=[System.Drawing.Color]::DarkRed
+    $GrpInput.Enabled=$true; $BtnRem.Enabled=$true
+    $LstLog.Items.Insert(0, "--- FERMATO ALLE " + (Get-Date).ToString("HH:mm:ss") + " ---")
+    $LblStatus.Text = "Fermato."
+    $LblStatus.ForeColor = [System.Drawing.Color]::White
+})
+
+$Timer.Add_Tick({
+    $Now = Get-Date
+    $Active = $false
+    foreach ($item in $LstSlots.Items) {
+        $parts = $item -split " - "
+        if ($Now -ge (Get-Date $parts[0]) -and $Now -le (Get-Date $parts[1])) {
+            $Active = $true; break
+        }
+    }
+    if ($Active) {
+        Premi-F15
+        $LogMsg = "[OK] " + $Now.ToString("dd/MM HH:mm") + " > F15 Premuto"
+        $LstLog.Items.Insert(0, $LogMsg)
+        if ($LstLog.Items.Count -gt 100) { $LstLog.Items.RemoveAt(100) }
+        $LblStatus.Text = "ATTIVO - Ultimo segnale: " + $Now.ToString("HH:mm")
+        $LblStatus.ForeColor = [System.Drawing.Color]::LightGreen
+    } else {
+        $LblStatus.Text = "PAUSA - Fuori orario"
+        $LblStatus.ForeColor = [System.Drawing.Color]::Orange
+    }
+})
+
+$Form.Add_Shown({$Form.Activate()})
+[void] $Form.ShowDialog()
